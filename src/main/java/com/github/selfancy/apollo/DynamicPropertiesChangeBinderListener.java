@@ -6,7 +6,8 @@ import com.ctrip.framework.apollo.ConfigService;
 import com.ctrip.framework.apollo.core.ConfigConsts;
 import com.ctrip.framework.apollo.model.ConfigChangeEvent;
 import com.ctrip.framework.apollo.spring.config.PropertySourcesConstants;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -40,7 +41,6 @@ import java.util.stream.Collectors;
  * <p>
  * Created by mike on 2020/8/13 since 1.0
  */
-@Slf4j
 @SuppressWarnings("all")
 @ConditionalOnClass(Config.class)
 @ConditionalOnProperty(PropertySourcesConstants.APOLLO_BOOTSTRAP_ENABLED)
@@ -51,6 +51,7 @@ class DynamicPropertiesChangeBinderListener implements ApplicationContextAware,
     private ConfigurationBeanFactoryMetadata beanFactoryMetadata;
     private String[] apolloNamespaces;
     private static final int ORDER = DynamicPropertiesConfigBeanPostProcessor.ORDER - 1;
+    private static final Logger LOGGER = LoggerFactory.getLogger(DynamicPropertiesChangeBinderListener.class);
 
     @Override
     public int getOrder() {
@@ -92,7 +93,7 @@ class DynamicPropertiesChangeBinderListener implements ApplicationContextAware,
                 if (changedKey.startsWith(propertiesPrefix) && !refreshedKeys.contains(propertiesPrefix)) {
                     final Object bean = entry.getValue();
                     refreshConfigPropertiesBean(propertiesPrefix, bean);
-                    log.info("Dynamic update apollo changed value successfully, refreshed bean {}.\n{}", bean.getClass().getName(),
+                    LOGGER.info("Dynamic update apollo changed value successfully, refreshed bean {}.\n{}", bean.getClass().getName(),
                             changedKeys.stream()
                                     .filter(key -> key.startsWith(propertiesPrefix))
                                     .map(key -> changeEvent.getChange(key))
