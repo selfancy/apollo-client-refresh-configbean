@@ -1,6 +1,8 @@
 buildscript {
     ext {
-        springBootVersion = '2.0.5.RELEASE'
+        springBootVersion = '2.4.0'
+        apolloClientVersion = '2.2.0'
+        lombokVersion = '1.18.30'
     }
     repositories {
         mavenLocal()
@@ -12,7 +14,7 @@ buildscript {
 }
 
 group 'com.github.selfancy'
-version '1.0.0-RELEASE'
+version '1.0.1-RELEASE'
 
 apply plugin: 'java'
 apply plugin: 'org.springframework.boot'
@@ -25,13 +27,15 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
-    implementation 'com.ctrip.framework.apollo:apollo-client:1.3.0'
+    implementation "com.ctrip.framework.apollo:apollo-client:${apolloClientVersion}"
+    testImplementation 'org.springframework.boot:spring-boot-starter'
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
 }
 
 bootJar.enabled = false
 jar.enabled = true
 
-def file = new File(System.getProperty("user.home") + "/code/publish/publish.gradle")
-if (file.exists()) {
-    apply from:  file.absolutePath
-}
+apply from: rootProject.file("gradle/publish.gradle")

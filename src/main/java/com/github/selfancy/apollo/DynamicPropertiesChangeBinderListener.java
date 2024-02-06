@@ -12,13 +12,9 @@ import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationStartedEvent;
-import org.springframework.boot.context.properties.ConfigurationBeanFactoryMetadata;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.bind.BindHandler;
-import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.bind.PropertySourcesPlaceholdersResolver;
-import org.springframework.boot.context.properties.bind.handler.IgnoreTopLevelConverterNotFoundBindHandler;
 import org.springframework.boot.context.properties.source.ConfigurationPropertySources;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -48,7 +44,6 @@ class DynamicPropertiesChangeBinderListener implements ApplicationContextAware,
         ApplicationListener<ApplicationStartedEvent>, ConfigChangeListener, Ordered {
 
     private Binder binder;
-    private ConfigurationBeanFactoryMetadata beanFactoryMetadata;
     private String[] apolloNamespaces;
     private static final int ORDER = DynamicPropertiesConfigBeanPostProcessor.ORDER - 1;
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamicPropertiesChangeBinderListener.class);
@@ -60,9 +55,9 @@ class DynamicPropertiesChangeBinderListener implements ApplicationContextAware,
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        final ConfigurableApplicationContext context = (ConfigurableApplicationContext) applicationContext;
-        final ConfigurableEnvironment environment = context.getEnvironment();
-        final MutablePropertySources propertySources = environment.getPropertySources();
+        ConfigurableApplicationContext context = (ConfigurableApplicationContext) applicationContext;
+        ConfigurableEnvironment environment = context.getEnvironment();
+        MutablePropertySources propertySources = environment.getPropertySources();
         this.binder = new Binder(ConfigurationPropertySources.from(propertySources),
                 new PropertySourcesPlaceholdersResolver(propertySources),
                 context.getBeanFactory().getConversionService(),
@@ -85,15 +80,17 @@ class DynamicPropertiesChangeBinderListener implements ApplicationContextAware,
 
     @Override
     public synchronized void onChange(ConfigChangeEvent changeEvent) {
-        final Set<String> changedKeys = changeEvent.changedKeys();
-        final Set<String> refreshedKeys = new HashSet<>();
-        for (Map.Entry<String, Object> entry : getConfigBeanMap().entrySet()) {
+        Set<String> changedKeys = changeEvent.changedKeys();
+        Set<String> refreshedKeys = new HashSet<>();
+        for (Map.Entry<String, DynamicPropertiesBeanBinder> entry : getConfigBeanMap().entrySet()) {
             String propertiesPrefix = entry.getKey();
             for (String changedKey : changedKeys) {
-                if (changedKey.startsWith(propertiesPrefix) && !refreshedKeys.contains(propertiesPrefix)) {
-                    final Object bean = entry.getValue();
-                    refreshConfigPropertiesBean(propertiesPrefix, bean);
-                    LOGGER.info("Dynamic update apollo changed value successfully, refreshed bean {}.\n{}", bean.getClass().getName(),
+                DynamicPropertiesBeanBinder beanBinder = entry.getValue();
+                if (changedKey.startsWith(propertiesPrefix) && !refreshedKeys.contains(propertiesPrefix)
+                        && beanBinder.isEnabledDynamicChange()) {
+                    refreshConfigPropertiesBean(propertiesPrefix, beanBinder);
+                    LOGGER.info("Dynamic update apollo changed value successfully, refreshed bean {}.\n{}",
+                            beanBinder.getBean().getClass().getName(),
                             changedKeys.stream()
                                     .filter(key -> key.startsWith(propertiesPrefix))
                                     .map(key -> changeEvent.getChange(key))
@@ -105,13 +102,11 @@ class DynamicPropertiesChangeBinderListener implements ApplicationContextAware,
         }
     }
 
-    private <T> void refreshConfigPropertiesBean(String configPrefix, T bean) {
-        final Bindable<T> target = Bindable.ofInstance(bean);
-        BindHandler handler = new IgnoreTopLevelConverterNotFoundBindHandler();
-        this.binder.bind(configPrefix, target, handler);
+    private <T> void refreshConfigPropertiesBean(String configPrefix, DynamicPropertiesBeanBinder beanBinder) {
+        beanBinder.bind(binder, configPrefix);
     }
 
-    private Map<String, Object> getConfigBeanMap() {
-        return DynamicPropertiesConfigBeanPostProcessor.getConfigBeanMap();
+    private Map<String, DynamicPropertiesBeanBinder> getConfigBeanMap() {
+        return DynamicPropertiesConfigBeanPostProcessor.getConfigBeanBinderMap();
     }
 }

@@ -8,6 +8,7 @@ import java.lang.annotation.*;
  * <br>
  * Sample:
  * <pre>
+ * <br> @Data
  * <br> @DynamicProperties
  * <br> @ConfigurationProperties("custom")
  * <br> public class CustomProperties {
@@ -20,4 +21,18 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface DynamicProperties {
+
+    /**
+     * Enabled property to enable dynamic refresh
+     * <br>
+     * Such as @ConfigurationProperties("sample") bean.
+     * <br>
+     * enable property: sample._dynamic_enabled=true  (default is true, empty property also true)
+     * <br>
+     * disable property: sample._dynamic_enabled=false
+     *
+     * @return String
+     * @since 1.0.1
+     */
+    String enableProperty() default "_dynamic_enabled";
 }
