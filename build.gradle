@@ -38,4 +38,7 @@ dependencies {
 bootJar.enabled = false
 jar.enabled = true
 
-apply from: rootProject.file("gradle/publish.gradle")
+def file = new File(System.getProperty("user.home") + "/code/publish/publish.gradle")
+if (file.exists()) {
+    apply from:  file.absolutePath
+}
